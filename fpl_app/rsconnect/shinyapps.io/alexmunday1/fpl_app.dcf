@@ -1,0 +1,11 @@
+name: fpl_app
+title:
+username:
+account: alexmunday1
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4426113
+bundleId: 4858149
+url: https://alexmunday1.shinyapps.io/fpl_app/
+when: 1627331873.63518
+lastSyncTime: 1627331873.63518
