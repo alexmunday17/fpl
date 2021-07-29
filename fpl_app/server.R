@@ -1,59 +1,44 @@
 library(shiny)
 library(data.table)
 
-# Define server logic required to draw a histogram
+league_id <- 348449
+url <- paste0("https://fantasy.premierleague.com/api/leagues-h2h/", league_id, "/standings")
+league <- fromJSON(url)
+standings <- setDT(league$new_entries$results)
+standings[, points := 0]
+standings[, money_won := 0]
+standings[, rounds_owed := 0]
+n_players <- nrow(standings)
+team_names <- standings$entry_name
+
 shinyServer(function(input, output) {
 
-    league_data <- reactive({
-
-        league_id <- 119062
-        url <- paste0("https://fantasy.premierleague.com/api/leagues-h2h/", league_id, "/standings")
-        league <- fromJSON(url)
-
-
-        player_names <- c("alex", "ben", "jake", "tk", "will")
-        n_players <- length(player_names)
-        data.table(player = player_names,
-                   league_pts = rep(0, n_players),
-                   overall_pts = rep(0, n_players),
-                   max_pts = rep(0, n_players),
-                   first_wc = rep(0, n_players),
-                   second_wc = rep(0, n_players),
-                   triple_captain = rep(0, n_players),
-                   bench_boost = rep(0, n_players),
-                   free_hit = rep(0, n_players))
-    })
-
     output$t1 <- renderTable({
-        fpl_data()
+        standings
     })
 
     output$t2 <- renderTable({
-        league_data()
-    })
+        data.table(Team = team_names,
+                   `League Points` = rep(0, n_players),
+                   `Overall Points` = rep(0, n_players),
+                   `Highest Score` = rep(0, n_players),
+                   `Lowest Score` = rep(0, n_players),
+                   `First Wildcard` = rep(0, n_players),
+                   `Second Wildcard` = rep(0, n_players),
+                   `Triple Captain` = rep(0, n_players),
+                   `Bench Boost` = rep(0, n_players),
+                   `Free Hit` = rep(0, n_players))
+    }, digits = 0)
 
     output$t3 <- renderTable({
-        fpl_data()
-    })
+        breakdown <- data.table(Round = c("League Points", "Overall Points", "Highest Score",
+                                          "Lowest Score", "First Wildcard", "Second Wildcard",
+                                          "Triple Captain", "Bench Boost", "Free Hit"),
+                                Prize = c("£60 (1st), £30 (2nd)", "", "£10", "", "£10", "£10",
+                                          "10", "£10", "£10"),
+                                Forfeit = c("TBC", "Round", "", "Round", "Round", "Round",
+                                            "Round", "Round", "Round"))
 
-    output$t4 <- renderTable({
-        fpl_data()
-    })
-
-    output$t5 <- renderTable({
-        fpl_data()
-    })
-
-    output$t6 <- renderTable({
-        fpl_data()
-    })
-
-    output$t7 <- renderTable({
-        fpl_data()
-    })
-
-    output$t8 <- renderTable({
-        fpl_data()
     })
 
 })

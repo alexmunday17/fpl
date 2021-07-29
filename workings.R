@@ -16,14 +16,14 @@ rownames(fpl) <- player_names
 player_ids <- 1750198
 league_id <- 348449
 
-league_id <- 119062
 url <- paste0("https://fantasy.premierleague.com/api/leagues-h2h/", league_id, "/standings")
 league <- fromJSON(url)
+standings <- setDT(league$new_entries$results)
 
 
 
 
-url <- paste0("https://fantasy.premierleague.com/api/entry/", x, "/history")
+url <- paste0("https://fantasy.premierleague.com/api/entry/", player_ids, "/history/")
 info_list <- fromJSON(url)
 
 
