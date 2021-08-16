@@ -27,6 +27,10 @@ url <- paste0("https://fantasy.premierleague.com/api/entry/", player_ids, "/hist
 info_list <- fromJSON(url)
 
 
+
+
+
+
 # to do
 
 # logic for money + rounds
