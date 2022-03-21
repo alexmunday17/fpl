@@ -1,6 +1,6 @@
 library(shiny)
 library(data.table)
-library(rjson)
+library(jsonlite)
 library(curl)
 library(stringr)
 
