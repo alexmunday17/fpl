@@ -82,7 +82,7 @@ get_gw_scores <- function(player_id) {
         tc <- 0
     }
     fh <- max(0, gws[name == "freehit", sum(points)])
-    bb <- max(0, gws[name == "bboost", sum(points)])
+    bb <- max(0, gws[name == "bboost", sum(points - event_transfers_cost)])
     wc1 <- max(0, gws[name == "wildcard" & time < "2022-01-01", points])
     wc2 <- max(0, gws[name == "wildcard" & time > "2022-01-01", points])
 
