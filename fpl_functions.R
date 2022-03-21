@@ -3,7 +3,7 @@ calc_win_lose <- function(x, round, win = TRUE) {
         if (win) {
             return(paste0(x[1, Team], " (1st), ", x[2, Team], " (2nd)"))
         } else {
-            return("")
+            return(x[5, Team])
         }
     }
     if (round == "Lowest Score" & win) {
@@ -75,12 +75,16 @@ get_gw_scores <- function(player_id) {
     }
     setDT(gws)
 
-    min_score <- min(gws$points)
-    tc <- max(0, gws[name == "3xc", points])
-    fh <- max(0, gws[name == "fh", points])
-    bb <- max(0, gws[name == "bb", points])
-    wc1 <- max(0, gws[name == "wc" & time < "2022-01-01", points])
-    wc2 <- max(0, gws[name == "wc" & time > "2022-01-01", points])
+    min_score <- gws[, min(points - event_transfers_cost)]
+    if (gws[name == "3xc", .N]) {
+        tc <- get_tc_score(player_id, gws[name == "3xc", event])
+    } else {
+        tc <- 0
+    }
+    fh <- max(0, gws[name == "freehit", sum(points)])
+    bb <- max(0, gws[name == "bboost", sum(points)])
+    wc1 <- max(0, gws[name == "wildcard" & time < "2022-01-01", points])
+    wc2 <- max(0, gws[name == "wildcard" & time > "2022-01-01", points])
 
     return(list(`Lowest Score` = min_score,
                 `First Wildcard` = wc1,
@@ -88,4 +92,23 @@ get_gw_scores <- function(player_id) {
                 `Triple Captain` = tc,
                 `Bench Boost` = bb,
                 `Free Hit` = fh))
+}
+
+get_tc_score <- function(player_id, gw) {
+    url <- paste0("https://fantasy.premierleague.com/api/entry/",
+                  player_id, "/event/", gw, "/picks/")
+    info_list <- fromJSON(url)
+
+    team <- info_list$picks
+    setDT(team)
+    tc_id <- team[multiplier == 3, element]
+
+    tc_url <- paste0("https://fantasy.premierleague.com/api/element-summary/", tc_id, "/")
+    tc_info_list <- fromJSON(tc_url)
+
+    tc_scores <- tc_info_list$history
+    setDT(tc_scores)
+    tc_score <- tc_scores[round == gw, sum(total_points)]
+
+    return(3 * tc_score)
 }
