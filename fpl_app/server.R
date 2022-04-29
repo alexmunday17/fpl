@@ -62,7 +62,7 @@ calc_money_rounds <- function(summary_table, breakdown_table) {
     money_won[1] <- money_won[1] + 50
     money_won[2] <- money_won[2] + 25
 
-    return(list(paste0("£", round(money_won, 2)), round(rounds_owed, 1)))
+    return(list(paste0("£", round(money_won, 2)), round(rounds_owed, 2)))
 
 }
 
@@ -119,6 +119,44 @@ get_tc_score <- function(player_id, gw) {
     return(3 * tc_score)
 }
 
+get_expected_points <- function(player_ids) {
+
+    out <- NULL
+
+    for (i in player_ids) {
+        url <- paste0("https://fantasy.premierleague.com/api/entry/", i, "/history/")
+        info_list <- fromJSON(url)
+        gws <- info_list$current
+        pts <- gws$points - gws$event_transfers_cost
+        out <- rbind(out,
+                     data.table(gw = 1:length(pts),
+                                player_id = i,
+                                pts = pts))
+    }
+
+    url <- "https://fantasy.premierleague.com/api/bootstrap-static/"
+    info_list <- fromJSON(url)
+    average_scores <- info_list$events[, c("id", "average_entry_score")]
+    setDT(average_scores)
+    out <- rbind(out, average_scores[, .(gw = id, player_id = 0, pts = average_entry_score)])
+
+    out[, expected_pts := 0]
+
+    for (i in 1:max(out$gw)) {
+        for (j in unique(out$player_id)) {
+            player_score <- out[player_id == j & gw == i, pts]
+            other_scores <- out[player_id != j & gw == i, pts]
+            exp_pts <- mean(player_score > other_scores) * 3 + mean(player_score == other_scores)
+            out[player_id == j & gw == i, expected_pts := exp_pts]
+        }
+    }
+
+    out <- out[, .(exp_pts = sum(expected_pts)), by = player_id]
+
+    return(out)
+
+}
+
 league_id <- 348449
 url <- paste0("https://fantasy.premierleague.com/api/leagues-h2h/", league_id, "/standings")
 league <- fromJSON(url)
@@ -128,17 +166,23 @@ api_data <- api_data[entry_name != "AVERAGE"]
 team_names <- api_data$entry_name
 n_players <- length(team_names)
 
+api_data[, key := 1:.N]
+
+expected_points <- get_expected_points(api_data$entry)
+api_data <- merge(api_data, expected_points[, .(entry = player_id, exp_pts)], by = "entry")
+
 all_data <- api_data[, .(Team = entry_name,
                          `League Points` = total,
                          `Overall Points` = points_for,
-                         key = 1:.N)]
+                         `Expected Points` = exp_pts,
+                         key)]
 all_data <- merge(all_data, api_data[, get_gw_scores(entry), by = entry_name],
                   by.x = "Team", by.y = "entry_name")
 
 setkey(all_data, key)
 all_data[, key := NULL]
 
-standings <- all_data[, .(Team, `League Points`)]
+standings <- all_data[, .(Team, `League Points`, `Expected Points`)]
 
 
 

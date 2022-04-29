@@ -56,7 +56,7 @@ calc_money_rounds <- function(summary_table, breakdown_table) {
     money_won[1] <- money_won[1] + 50
     money_won[2] <- money_won[2] + 25
 
-    return(list(paste0("£", round(money_won, 2)), round(rounds_owed, 1)))
+    return(list(paste0("£", round(money_won, 2)), round(rounds_owed, 2)))
 
 }
 
@@ -111,4 +111,42 @@ get_tc_score <- function(player_id, gw) {
     tc_score <- tc_scores[round == gw, sum(total_points)]
 
     return(3 * tc_score)
+}
+
+get_expected_points <- function(player_ids) {
+
+    out <- NULL
+
+    for (i in player_ids) {
+        url <- paste0("https://fantasy.premierleague.com/api/entry/", i, "/history/")
+        info_list <- fromJSON(url)
+        gws <- info_list$current
+        pts <- gws$points - gws$event_transfers_cost
+        out <- rbind(out,
+                     data.table(gw = 1:length(pts),
+                                player_id = i,
+                                pts = pts))
+    }
+
+    url <- "https://fantasy.premierleague.com/api/bootstrap-static/"
+    info_list <- fromJSON(url)
+    average_scores <- info_list$events[, c("id", "average_entry_score")]
+    setDT(average_scores)
+    out <- rbind(out, average_scores[, .(gw = id, player_id = 0, pts = average_entry_score)])
+
+    out[, expected_pts := 0]
+
+    for (i in 1:max(out$gw)) {
+        for (j in unique(out$player_id)) {
+            player_score <- out[player_id == j & gw == i, pts]
+            other_scores <- out[player_id != j & gw == i, pts]
+            exp_pts <- mean(player_score > other_scores) * 3 + mean(player_score == other_scores)
+            out[player_id == j & gw == i, expected_pts := exp_pts]
+        }
+    }
+
+    out <- out[, .(exp_pts = sum(expected_pts)), by = player_id]
+
+    return(out)
+
 }
