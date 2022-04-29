@@ -183,7 +183,7 @@ setkey(all_data, key)
 all_data[, key := NULL]
 
 standings <- all_data[, .(Team, `League Points`, `Expected Points`)]
-
+all_data[, `Expected Points` := NULL]
 
 
 
