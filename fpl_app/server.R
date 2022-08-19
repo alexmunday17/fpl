@@ -9,10 +9,10 @@ calc_win_lose <- function(x, round, win = TRUE) {
         if (win) {
             return(paste0(x[1, Team], " (1st), ", x[2, Team], " (2nd)"))
         } else {
-            return(x[5, Team])
+            return(x[.N, Team])
         }
     }
-    if (round == "Lowest Score" & win) {
+    if (round %in% c("Lowest Score", "Overall Points") & win) {
         return("")
     }
     if (win) {
@@ -26,9 +26,14 @@ calc_win_lose <- function(x, round, win = TRUE) {
 
 calc_all <- function(table, x) {
 
-    rounds <- c("League Points", "Overall Points",
-                "Lowest Score", "First Wildcard", "Second Wildcard",
-                "Triple Captain", "Bench Boost", "Free Hit")
+    rounds <- c("League Points",
+                "Overall Points",
+                "Lowest Score",
+                "Highest Non-Chip Score",
+                "Wildcard Sum",
+                "Triple Captain",
+                "Bench Boost",
+                "Free Hit")
 
     lapply(rounds, function(y) {
         table[Round == y, Winner := calc_win_lose(x, y, TRUE)]
@@ -46,7 +51,7 @@ calc_money_rounds <- function(summary_table, breakdown_table) {
     n_winners <- str_count(winners, ",") + 1
     n_losers <- str_count(losers, ",") + 1
 
-    win_money <- c(15, 0, 10, 10, 10, 10, 10) / n_winners
+    win_money <- c(0, 0, 10, 10, 10, 10, 10) / n_winners
     lose_rounds <- 1 / n_losers
 
     teams <- summary_table$Team
@@ -60,9 +65,15 @@ calc_money_rounds <- function(summary_table, breakdown_table) {
     }
 
     money_won[1] <- money_won[1] + 50
-    money_won[2] <- money_won[2] + 25
+    money_won[2] <- money_won[2] + 20
 
-    return(list(paste0("£", round(money_won, 2)), round(rounds_owed, 2)))
+    money_won <- money_won - 20
+
+    money_won <- fifelse(money_won >= 0,
+                         paste0("£", round(money_won, 2)),
+                         paste0("-£", abs(round(money_won, 2))))
+
+    return(list(money_won, round(rounds_owed, 2)))
 
 }
 
@@ -89,12 +100,12 @@ get_gw_scores <- function(player_id) {
     }
     fh <- max(0, gws[name == "freehit", sum(points)])
     bb <- max(0, gws[name == "bboost", sum(points - event_transfers_cost)])
-    wc1 <- max(0, gws[name == "wildcard" & time < "2022-01-01", points])
-    wc2 <- max(0, gws[name == "wildcard" & time > "2022-01-01", points])
+    wc_sum <- max(0, gws[name == "wildcard", sum(points)])
+    max_non_chip <- gws[name == "", max(points)]
 
     return(list(`Lowest Score` = min_score,
-                `First Wildcard` = wc1,
-                `Second Wildcard` = wc2,
+                `Highest Non-Chip Score` = max_non_chip,
+                `Wildcard Sum` = wc_sum,
                 `Triple Captain` = tc,
                 `Bench Boost` = bb,
                 `Free Hit` = fh))
@@ -157,7 +168,12 @@ get_expected_points <- function(player_ids) {
 
 }
 
-league_id <- 348449
+
+
+
+
+
+league_id <- 884537
 url <- paste0("https://fantasy.premierleague.com/api/leagues-h2h/", league_id, "/standings")
 league <- fromJSON(url)
 
@@ -189,13 +205,30 @@ all_data[, `Expected Points` := NULL]
 
 
 
-breakdown <- data.table(Round = c("League Points", "Overall Points",
-                                  "Lowest Score", "First Wildcard", "Second Wildcard",
-                                  "Triple Captain", "Bench Boost", "Free Hit"),
-                        Prize = c("£50 (1st), £25 (2nd)", "£15", "", "£10", "£10",
-                                  "£10", "£10", "£10"),
-                        Forfeit = c("Charity outfit", "Round", "Round", "Round", "Round",
-                                    "Round", "Round", "Round"),
+breakdown <- data.table(Round = c("League Points",
+                                  "Overall Points",
+                                  "Lowest Score",
+                                  "Highest Non-Chip Score",
+                                  "Wildcard Sum",
+                                  "Triple Captain",
+                                  "Bench Boost",
+                                  "Free Hit"),
+                        Prize = c("£50 (1st), £20 (2nd)",
+                                  "",
+                                  "",
+                                  "£10",
+                                  "£10",
+                                  "£10",
+                                  "£10",
+                                  "£10"),
+                        Forfeit = c("Charity outfit",
+                                    "Round",
+                                    "Round",
+                                    "Round",
+                                    "Round",
+                                    "Round",
+                                    "Round",
+                                    "Round"),
                         Winner = "",
                         Loser = "")
 calc_all(breakdown, all_data)

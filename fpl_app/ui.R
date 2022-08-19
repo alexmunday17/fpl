@@ -2,7 +2,7 @@ library(shiny)
 
 shinyUI(fluidPage(
 
-    titlePanel("Quintuple Threat"),
+    titlePanel("Sextuple Threat"),
 
     mainPanel(
         tabsetPanel(
