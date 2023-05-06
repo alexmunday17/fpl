@@ -86,7 +86,12 @@ get_gw_scores <- function(player_id) {
     }
     setDT(gws)
 
-    min_score <- gws[, min(points - event_transfers_cost)]
+    # wildcard for world cup
+    if (Sys.Date() < "2023-08-01") {
+        gws[event == 17, name := "wildcard"]
+    }
+
+    min_score <- gws[points != 0, min(points - event_transfers_cost)]
     if (gws[name == "3xc", .N]) {
         tc <- get_tc_score(player_id, gws[name == "3xc", event])
     } else {
@@ -95,7 +100,7 @@ get_gw_scores <- function(player_id) {
     fh <- max(0, gws[name == "freehit", sum(points)])
     bb <- max(0, gws[name == "bboost", sum(points - event_transfers_cost)])
     wc_sum <- max(0, gws[name == "wildcard", sum(points)])
-    max_non_chip <- gws[name == "", max(points)]
+    max_non_chip <- gws[is.na(name), max(points)]
 
     return(list(`Lowest Score` = min_score,
                 `Highest Non-Chip Score` = max_non_chip,
@@ -139,11 +144,13 @@ get_expected_points <- function(player_ids) {
                                 pts = pts))
     }
 
-    url <- "https://fantasy.premierleague.com/api/bootstrap-static/"
-    info_list <- fromJSON(url)
-    average_scores <- info_list$events[, c("id", "average_entry_score")]
-    setDT(average_scores)
-    out <- rbind(out, average_scores[, .(gw = id, player_id = 0, pts = average_entry_score)])
+    if (length(player_ids) %% 2) {
+        url <- "https://fantasy.premierleague.com/api/bootstrap-static/"
+        info_list <- fromJSON(url)
+        average_scores <- info_list$events[, c("id", "average_entry_score")]
+        setDT(average_scores)
+        out <- rbind(out, average_scores[, .(gw = id, player_id = 0, pts = average_entry_score)])
+    }
 
     out[, expected_pts := 0]
 
