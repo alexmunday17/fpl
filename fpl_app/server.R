@@ -106,7 +106,7 @@ get_gw_scores <- function(player_id) {
     fh <- max(0, gws[name == "freehit", sum(points)])
     bb <- max(0, gws[name == "bboost", sum(points - event_transfers_cost)])
     wc_sum <- max(0, gws[name == "wildcard", sum(points)])
-    max_non_chip <- gws[is.na(name), max(points)]
+    max_non_chip <- gws[is.na(name), max(points - event_transfers_cost)]
 
     return(list(`Lowest Score` = min_score,
                 `Highest Non-Chip Score` = max_non_chip,
