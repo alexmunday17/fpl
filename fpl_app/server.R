@@ -92,11 +92,6 @@ get_gw_scores <- function(player_id) {
     }
     setDT(gws)
 
-    # wildcard for world cup
-    if (Sys.Date() < "2023-08-01") {
-        gws[event == 17, name := "wildcard"]
-    }
-
     min_score <- gws[points != 0, min(points - event_transfers_cost)]
     if (gws[name == "3xc", .N]) {
         tc <- get_tc_score(player_id, gws[name == "3xc", event])
@@ -106,7 +101,7 @@ get_gw_scores <- function(player_id) {
     fh <- max(0, gws[name == "freehit", sum(points)])
     bb <- max(0, gws[name == "bboost", sum(points - event_transfers_cost)])
     wc_sum <- max(0, gws[name == "wildcard", sum(points)])
-    max_non_chip <- gws[is.na(name), max(points - event_transfers_cost)]
+    max_non_chip <- gws[is.na(name) | name == "", max(points - event_transfers_cost)]
 
     return(list(`Lowest Score` = min_score,
                 `Highest Non-Chip Score` = max_non_chip,
@@ -181,7 +176,7 @@ get_expected_points <- function(player_ids) {
 
 
 
-league_id <- 884537
+league_id <- 372072
 url <- paste0("https://fantasy.premierleague.com/api/leagues-h2h/", league_id, "/standings")
 league <- fromJSON(url)
 
